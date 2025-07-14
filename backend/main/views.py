@@ -1,11 +1,14 @@
 import pandas as pd
 import json
+import random
 from rest_framework.response import Response
 from rest_framework import status
+from main.services.mail import send_email
 from rest_framework.decorators import api_view
 from main.models import Event, Faculty_Advisor, Organisation, Certificate, Faculty_Org, Faculty_Event
 import jwt
 import os
+import redis
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
 import cv2
@@ -16,6 +19,7 @@ import io
 import re
 from collections import Counter
 from django.conf import settings
+from django.core.mail import send_mail
 from io import BytesIO
 from django.http import HttpResponse
 from django.http import FileResponse
@@ -29,6 +33,18 @@ from django.db.models.functions import StrIndex, Substr, Length
 load_dotenv()
 
 secret_key = str(os.environ.get("SECRET_KEY"))
+# r = redis.Redis(host='localhost', port=6379, db=0)
+redis_host = os.getenv("REDIS_HOST", "redis")
+redis_port = int(os.getenv("REDIS_PORT", "6379"))
+
+r = redis.Redis(host=redis_host, port=redis_port, db=0, decode_responses=True)
+
+#using set expiry for verification code
+def set_forgot_password_token(token,expiry_seconds=60):  # 15 mins
+    key = f"code:{token}"      # namespacing keys
+    otp = random.randint(1000,9999)
+    r.setex(key, expiry_seconds, str(otp))
+
 
 # to verify faculty's token
 
@@ -144,6 +160,69 @@ def faculty_login(request):
                     status=status.HTTP_401_UNAUTHORIZED)
   except Exception as e:
     return Response({"ok": False, "error": str(e), "message": "Error while faculty login"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+  
+# otp = ''
+#forget password
+@api_view(["POST"])
+def forgot_password(request):
+  # global otp#for now as redis not working
+  # print(type(r.get("code")))
+  data = request.data
+  # email = "rahulsahuppd@gmail.com"
+  try:
+    set_forgot_password_token(data["email"],60)
+    otp = r.get(f"code:{data["email"]}")
+    # subject = "Your OTP for Dig-Cert-NITRR Password Reset"
+    # body = f"Hello,\n\nYour OTP is: {otp}\n\nThis OTP is valid for 1 minute."
+
+        # Send the email synchronously (blocks request-response)
+    # send_mail(
+    #     subject,
+    #     body,
+    #     None,             # from_email uses DEFAULT_FROM_EMAIL
+    #     [email],          # recipient list MUST be a list
+    #     fail_silently=False,
+    # )
+    check = Faculty_Advisor.objects.get(email=data["email"])
+    print(r.get(f"code:{data["email"]}"))
+    if check:
+      #send email here
+      return Response({"success": True, "message":"otp was sent" , "otp":r.get(f"code:{data["email"]}")}, status=status.HTTP_200_OK)
+    else:
+      return Response({"success": False, "message": "user not found"},
+                      status=status.HTTP_401_UNAUTHORIZED)
+  except Faculty_Advisor.DoesNotExist as e:
+    return Response({"success": False, "message": "Faculty doesn't exist"},
+                    status=status.HTTP_401_UNAUTHORIZED)
+  except Exception as e:
+    return Response({"success": False, "error": str(e), "message": "Error while faculty login"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+  
+@api_view(["POST"])
+def verify_otp(request):
+
+  
+  # data = request.data
+  data = request.data
+  new_password = make_password(data["password"])
+  otp = r.get(f"code:{data["email"]}")
+  try:
+    if otp is None:
+      return Response({"success": False, "message": "it took long time try again"}, status=status.HTTP_404_NOT_FOUND)
+       
+    if data["code"]==str(otp):
+      # send_email("otp for Dig-Cert-NITRR", f"Your OTP is {otp}", [data["email"]])
+      check = Faculty_Advisor.objects.filter(email=data["email"]).update(password=new_password)
+      return Response({"success": True, "message": "password changed successfully"}, status=status.HTTP_200_OK)
+    else:
+      return Response({"success": False, "message": "Wrong Password","otp":otp},
+                      status=status.HTTP_401_UNAUTHORIZED)
+  except Faculty_Advisor.DoesNotExist as e:
+    return Response({"ok": False, "message": "Faculty doesn't exist"},
+                    status=status.HTTP_401_UNAUTHORIZED)
+  except Exception as e:
+    return Response({"ok": False, "error": str(e), "message": "Error while changing password"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

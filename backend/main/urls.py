@@ -1,5 +1,5 @@
 from django.urls import path, include, re_path
-from .views import user_login, register_event, faculty_login, approveL0, get_rows, get_event_details, get_all_org, get_faculties, get_cdc_events, get_dsw_events,approveL1, get_certificate, faculty_register, user_register, preview_certificate, preview_event_certificate
+from .views import verify_otp,forgot_password,user_login, register_event, faculty_login, approveL0, get_rows, get_event_details, get_all_org, get_faculties, get_cdc_events, get_dsw_events,approveL1, get_certificate, faculty_register, user_register, preview_certificate, preview_event_certificate
 from drf_yasg.views import get_schema_view
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -31,8 +31,10 @@ urlpatterns = [
     path("preview_certificate", preview_certificate),
     path("preview_event_certificate", preview_event_certificate),
     # path("delete_user", delete_user),
-    path("user_register", user_register),
+    path("user_register", user_register), 
     path("faculty_login", faculty_login),
+    path("forgot_password", forgot_password),
+    path("verify_otp", verify_otp),
     path("register_event", register_event),
     path("approveL0", approveL0),
     path("get_rows", get_rows),

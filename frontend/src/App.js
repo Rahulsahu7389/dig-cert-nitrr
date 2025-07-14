@@ -10,6 +10,7 @@ import Events from "./components/Events";
 import HomePage from "./components/HomePage";
 import DashboardAdmin from "./components/DashboardAdmin";
 import Certificate from "./components/Certificate";
+import ForgotPassword from "./components/ForgotPassword";
 import GetCertificate from "./components/GetCertificate";
 import VerifyCertificate from "./components/VerifyCertificate";
 import "./App.css";
@@ -57,6 +58,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/Login" element={<Login />} />
+            <Route path="/forgot_password" element={<ForgotPassword />} />
             <Route path="/events" element={<Events />} />
             <Route path="/register" element={<Register />} />
             <Route path="/register/faculty" element={<FacultyRegistration />} />

@@ -87,6 +87,11 @@ const FacultyLogin = () => {
             <button type="submit" className="submit-btn">
               Submit
             </button>
+            <Link to="/forgot_password">
+              <span style={{ color: "white", textDecoration: "underline" }}>
+                Forgot Password?
+              </span>
+            </Link>
           </form>
           {
             <Link to="/register/faculty">
